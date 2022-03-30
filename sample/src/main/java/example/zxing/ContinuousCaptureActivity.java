@@ -7,7 +7,6 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.ImageView;
 
-import com.google.zxing.ResultPoint;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 import com.journeyapps.barcodescanner.DecoratedBarcodeView;
@@ -34,7 +33,8 @@ public class ContinuousCaptureActivity extends Activity {
         }
 
         @Override
-        public void possibleResultPoints(List<ResultPoint> resultPoints) {
+        public void possibleResultPoints(List<com.google.zxing.ResultPoint> resultPoints) {
+
         }
     };
 

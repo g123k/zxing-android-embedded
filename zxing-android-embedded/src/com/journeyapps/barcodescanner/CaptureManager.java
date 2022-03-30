@@ -13,8 +13,8 @@ import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
 import android.view.Surface;
@@ -27,7 +27,6 @@ import com.google.zxing.client.android.BeepManager;
 import com.google.zxing.client.android.InactivityTimer;
 import com.google.zxing.client.android.Intents;
 import com.google.zxing.client.android.R;
-import com.google.zxing.integration.android.IntentIntegrator;
 
 import java.io.File;
 import java.io.FileOutputStream;

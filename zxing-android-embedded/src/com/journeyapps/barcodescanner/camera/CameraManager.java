@@ -40,10 +40,10 @@ import java.util.List;
 /**
  * Wrapper to manage the Camera. This is not thread-safe, and the methods must always be called
  * from the same thread.
- *
- *
+ * <p>
+ * <p>
  * Call order:
- *
+ * <p>
  * 1. setCameraSettings()
  * 2. open(), set desired preview size (any order)
  * 3. configure(), setPreviewDisplay(holder) (any order)
@@ -136,13 +136,13 @@ public final class CameraManager {
 
     /**
      * Configure the camera parameters, including preview size.
-     *
+     * <p>
      * The camera must be opened before calling this.
-     *
+     * <p>
      * Must be called from camera thread.
      */
     public void configure() {
-        if(camera == null) {
+        if (camera == null) {
             throw new RuntimeException("Camera not open");
         }
         setParameters();
@@ -161,7 +161,7 @@ public final class CameraManager {
 
     /**
      * Asks the camera hardware to begin drawing preview frames to the screen.
-     *
+     * <p>
      * Must be called from camera thread.
      */
     public void startPreview() {
@@ -177,7 +177,7 @@ public final class CameraManager {
 
     /**
      * Tells the camera to stop drawing preview frames.
-     *
+     * <p>
      * Must be called from camera thread.
      */
     public void stopPreview() {
@@ -199,7 +199,7 @@ public final class CameraManager {
 
     /**
      * Closes the camera driver if still in use.
-     *
+     * <p>
      * Must be called from camera thread.
      */
     public void close() {
@@ -213,16 +213,15 @@ public final class CameraManager {
      * @return true if the camera rotation is perpendicular to the current display rotation.
      */
     public boolean isCameraRotated() {
-        if(rotationDegrees == -1) {
+        if (rotationDegrees == -1) {
             throw new IllegalStateException("Rotation not calculated yet. Call configure() first.");
         }
         return rotationDegrees % 180 != 0;
     }
 
     /**
-     *
      * @return the camera rotation relative to display rotation, in degrees. Typically 0 if the
-     *    display is in landscape orientation.
+     * display is in landscape orientation.
      */
     public int getCameraRotation() {
         return rotationDegrees;
@@ -268,7 +267,14 @@ public final class CameraManager {
                 CameraConfigurationUtils.setBarcodeSceneMode(parameters);
             }
 
-            if (settings.isMeteringEnabled()) {
+            if (settings.isTouchToFocusEnabled()) {
+                // Start with autofocus, then enable touch to focus
+                CameraConfigurationUtils.setFocus(parameters,
+                        CameraSettings.FocusMode.CONTINUOUS,
+                        false
+                );
+
+            } else if (settings.isMeteringEnabled()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
                     CameraConfigurationUtils.setVideoStabilization(parameters);
                     CameraConfigurationUtils.setFocusArea(parameters);
@@ -349,7 +355,6 @@ public final class CameraManager {
         camera.setDisplayOrientation(rotation);
     }
 
-
     private void setParameters() {
         try {
             this.rotationDegrees = calculateDisplayRotation();
@@ -412,7 +417,7 @@ public final class CameraManager {
 
     /**
      * A single preview frame will be returned to the supplied callback.
-     *
+     * <p>
      * The thread on which this called is undefined, so a Handler should be used to post the result
      * to the correct thread.
      *

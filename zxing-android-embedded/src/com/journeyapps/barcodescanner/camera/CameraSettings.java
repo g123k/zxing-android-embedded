@@ -8,10 +8,11 @@ import com.google.zxing.client.android.camera.open.OpenCameraInterface;
 public class CameraSettings {
     private int requestedCameraId = OpenCameraInterface.NO_REQUESTED_CAMERA;
     private boolean scanInverted = false;
-    private boolean barcodeSceneModeEnabled = false;
+    private boolean barcodeSceneModeEnabled = true;
     private boolean meteringEnabled = false;
     private boolean autoFocusEnabled = true;
     private boolean continuousFocusEnabled = false;
+    private boolean touchToFocusEnabled = false;
     private boolean exposureEnabled = false;
     private boolean autoTorchEnabled = false;
     private FocusMode focusMode = FocusMode.AUTO;
@@ -20,7 +21,8 @@ public class CameraSettings {
         AUTO,
         CONTINUOUS,
         INFINITY,
-        MACRO
+        MACRO,
+        TOUCH_TO_FOCUS
     }
 
     public int getRequestedCameraId() {
@@ -40,7 +42,7 @@ public class CameraSettings {
 
     /**
      * Default to false.
-     *
+     * <p>
      * Inverted means dark & light colors are inverted.
      *
      * @return true if scan is inverted
@@ -54,7 +56,7 @@ public class CameraSettings {
     }
 
     /**
-     * Default to false.
+     * Default to true.
      *
      * @return true if barcode scene mode is enabled
      */
@@ -81,7 +83,7 @@ public class CameraSettings {
 
     /**
      * Default to false.
-     *
+     * <p>
      * If enabled, metering is performed to determine focus area.
      *
      * @return true if metering is enabled
@@ -91,6 +93,10 @@ public class CameraSettings {
     }
 
     public void setMeteringEnabled(boolean meteringEnabled) {
+        if (meteringEnabled) {
+            this.touchToFocusEnabled = false;
+        }
+
         this.meteringEnabled = meteringEnabled;
     }
 
@@ -108,10 +114,31 @@ public class CameraSettings {
 
         if (autoFocusEnabled && continuousFocusEnabled) {
             focusMode = FocusMode.CONTINUOUS;
+            touchToFocusEnabled = false;
         } else if (autoFocusEnabled) {
             focusMode = FocusMode.AUTO;
+            touchToFocusEnabled = false;
         } else {
             focusMode = null;
+        }
+    }
+
+    /**
+     * Default to false.
+     *
+     * @return true if touch to focus is enabled
+     */
+    public boolean isTouchToFocusEnabled() {
+        return touchToFocusEnabled;
+    }
+
+    public void setTouchToFocusEnabled(boolean touchToFocusEnabled) {
+        this.touchToFocusEnabled = touchToFocusEnabled;
+
+        if (touchToFocusEnabled) {
+            focusMode = FocusMode.TOUCH_TO_FOCUS;
+        } else {
+            setAutoFocusEnabled(autoFocusEnabled);
         }
     }
 
@@ -126,6 +153,7 @@ public class CameraSettings {
 
     public void setContinuousFocusEnabled(boolean continuousFocusEnabled) {
         this.continuousFocusEnabled = continuousFocusEnabled;
+
 
         if (continuousFocusEnabled) {
             focusMode = FocusMode.CONTINUOUS;

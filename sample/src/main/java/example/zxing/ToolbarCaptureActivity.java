@@ -1,8 +1,8 @@
 package example.zxing;
 
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.widget.Toolbar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.view.KeyEvent;
 
 import com.journeyapps.barcodescanner.CaptureManager;
@@ -11,7 +11,7 @@ import com.journeyapps.barcodescanner.DecoratedBarcodeView;
 /**
  * Sample Activity extending from ActionBarActivity to display a Toolbar.
  */
-public class ToolbarCaptureActivity extends ActionBarActivity {
+public class ToolbarCaptureActivity extends AppCompatActivity {
     private CaptureManager capture;
     private DecoratedBarcodeView barcodeScannerView;
 
