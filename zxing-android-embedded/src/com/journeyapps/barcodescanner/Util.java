@@ -11,4 +11,14 @@ public class Util {
             throw new IllegalStateException("Must be called from the main thread.");
         }
     }
+
+    public static int clamp(int x, int min, int max) {
+        if (x > max) {
+            return max;
+        }
+        if (x < min) {
+            return min;
+        }
+        return x;
+    }
 }

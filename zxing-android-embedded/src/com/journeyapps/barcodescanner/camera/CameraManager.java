@@ -79,6 +79,30 @@ public final class CameraManager {
     private Context context;
 
 
+    public void focusTo(int surfaceWidth, int surfaceHeight, float x, float y) {
+        Camera.Parameters parameters = camera.getParameters();
+
+        autoFocusManager.stop();
+        autoFocusManager = null;
+
+        CameraConfigurationUtils.setFocusArea(parameters, surfaceWidth, surfaceHeight, x, y);
+        camera.setParameters(parameters);
+
+        autoFocusManager = new AutoFocusManager(camera, settings);
+    }
+
+    public void cancelFocus() {
+        Camera.Parameters parameters = camera.getParameters();
+
+        autoFocusManager.stop();
+        autoFocusManager = null;
+
+        CameraConfigurationUtils.removeFocusArea(parameters);
+        camera.setParameters(parameters);
+
+        autoFocusManager = new AutoFocusManager(camera, settings);
+    }
+
     private final class CameraPreviewCallback implements Camera.PreviewCallback {
         private PreviewCallback callback;
 
@@ -263,24 +287,22 @@ public final class CameraManager {
                 CameraConfigurationUtils.setInvertColor(parameters);
             }
 
-            if (settings.isBarcodeSceneModeEnabled()) {
-                CameraConfigurationUtils.setBarcodeSceneMode(parameters);
-            }
+            CameraConfigurationUtils.setBarcodeSceneMode(parameters);
 
-            if (settings.isTouchToFocusEnabled()) {
+            //if (settings.isTouchToFocusEnabled()) {
                 // Start with autofocus, then enable touch to focus
                 CameraConfigurationUtils.setFocus(parameters,
                         CameraSettings.FocusMode.CONTINUOUS,
                         false
                 );
 
-            } else if (settings.isMeteringEnabled()) {
+            /*} else if (settings.isMeteringEnabled()) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
                     CameraConfigurationUtils.setVideoStabilization(parameters);
                     CameraConfigurationUtils.setFocusArea(parameters);
                     CameraConfigurationUtils.setMetering(parameters);
                 }
-            }
+            }*/
 
         }
 

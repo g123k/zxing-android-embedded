@@ -18,12 +18,17 @@ package com.google.zxing.client.android.camera;
 
 import android.annotation.TargetApi;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.hardware.Camera;
 import android.os.Build;
 import android.util.Log;
 
+import androidx.annotation.RequiresApi;
+
+import com.journeyapps.barcodescanner.Util;
 import com.journeyapps.barcodescanner.camera.CameraSettings;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,6 +49,7 @@ public final class CameraConfigurationUtils {
 
     private static final float MAX_EXPOSURE_COMPENSATION = 1.5f;
     private static final float MIN_EXPOSURE_COMPENSATION = 0.0f;
+    private static final int FOCUS_AREA_SIZE = 300;
     private static final int MIN_FPS = 10;
     private static final int MAX_FPS = 20;
     private static final int AREA_PER_1000 = 400;
@@ -184,8 +190,67 @@ public final class CameraConfigurationUtils {
     }
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
+    public static void setFocusArea(Camera.Parameters parameters, float surfaceWidth, float surfaceHeight, float x, float y) {
+        if (parameters.getMaxNumFocusAreas() > 0) {
+            Rect focusRect = calculateTapArea(surfaceWidth, surfaceHeight, x, y, 1f);
+
+            List<Camera.Area> areas = new ArrayList<>();
+            areas.add(new Camera.Area(focusRect, 1000));
+            parameters.setFocusAreas(areas);
+
+            if (meteringAreaSupported(parameters)) {
+                Rect meteringRect = calculateTapArea(surfaceWidth, surfaceHeight, x, y, 1.5f);
+
+                List<Camera.Area> meteringAreas = new ArrayList<>();
+                meteringAreas.add(new Camera.Area(meteringRect, 1000));
+                parameters.setMeteringAreas(meteringAreas);
+            }
+        } else {
+            Log.i(TAG, "Device does not support focus areas");
+        }
+    }
+
+    public static void removeFocusArea(Camera.Parameters parameters) {
+        if (parameters.getMaxNumFocusAreas() > 0) {
+            parameters.setFocusAreas(null);
+
+            if (meteringAreaSupported(parameters)) {
+                parameters.setMeteringAreas(null);
+            }
+        } else {
+            Log.i(TAG, "Device does not support focus areas");
+        }
+    }
+
+
+
+    private static Rect calculateTapArea(float surfaceWidth, float surfaceHeight, float x, float y, float coefficient) {
+        int areaSize = Float.valueOf(FOCUS_AREA_SIZE * coefficient).intValue();
+
+        int left = Util.clamp((int) x - areaSize / 2, 0, Float.valueOf(surfaceWidth).intValue() - areaSize);
+        int top = Util.clamp((int) y - areaSize / 2, 0, Float.valueOf(surfaceHeight).intValue() - areaSize);
+
+        //RectF rectF = new RectF(left, top, left + areaSize, top + areaSize);
+
+        Rect touchRect = new Rect(
+                (int)(x - 100),
+                (int)(y - 100),
+                (int)(x + 100),
+                (int)(y + 100));
+
+
+        final RectF rectF = new RectF(
+                touchRect.left * 2000f/surfaceWidth - 1000f,
+                touchRect.top * 2000f/surfaceHeight - 1000f,
+                touchRect.right * 2000f/surfaceWidth - 1000f,
+                touchRect.bottom * 2000f/surfaceHeight - 1000f);
+
+        return new Rect(Math.round(rectF.left), Math.round(rectF.top), Math.round(rectF.right), Math.round(rectF.bottom));
+    }
+
+    @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
     public static void setMetering(Camera.Parameters parameters) {
-        if (parameters.getMaxNumMeteringAreas() > 0) {
+        if (meteringAreaSupported(parameters)) {
             Log.i(TAG, "Old metering areas: " + parameters.getMeteringAreas());
             List<Camera.Area> middleArea = buildMiddleArea(AREA_PER_1000);
             Log.i(TAG, "Setting metering area to : " + toString(middleArea));
@@ -193,6 +258,11 @@ public final class CameraConfigurationUtils {
         } else {
             Log.i(TAG, "Device does not support metering areas");
         }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.ICE_CREAM_SANDWICH)
+    private static boolean meteringAreaSupported(Camera.Parameters parameters) {
+        return parameters.getMaxNumMeteringAreas() > 0;
     }
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)

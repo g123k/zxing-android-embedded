@@ -2,6 +2,7 @@ package com.journeyapps.barcodescanner.camera;
 
 import android.content.Context;
 import android.graphics.SurfaceTexture;
+import android.hardware.Camera;
 import android.os.Handler;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -239,6 +240,14 @@ public class CameraInstance {
         if (readyHandler != null) {
             readyHandler.obtainMessage(R.id.zxing_camera_error, error).sendToTarget();
         }
+    }
+
+    public void touchToFocus(int surfaceWidth, int surfaceHeight, float x, float y) {
+        cameraManager.focusTo(surfaceWidth, surfaceHeight, x, y);
+    }
+
+    public void cancelTouchToFocus() {
+        cameraManager.cancelFocus();
     }
 
     /**

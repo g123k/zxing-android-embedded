@@ -1,5 +1,6 @@
 package com.journeyapps.barcodescanner.camera;
 
 public interface ClickableViewListener {
-    void onSingleTap(double x, double y);
+    void onSingleTap(float x, float y);
+    void onDoubleTap(float x, float y);
 }

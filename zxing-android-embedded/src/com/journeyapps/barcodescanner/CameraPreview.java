@@ -20,8 +20,10 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import com.google.zxing.client.android.R;
+import com.google.zxing.client.android.camera.CameraConfigurationUtils;
 import com.journeyapps.barcodescanner.camera.CameraInstance;
 import com.journeyapps.barcodescanner.camera.CameraSettings;
 import com.journeyapps.barcodescanner.camera.CameraSurface;
@@ -262,11 +264,24 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
     }
 
     @Override
-    public void onSingleTap(double surfaceWidth, double surfaceHeight, double x, double y) {
-        // TODO HERE
+    public void onSingleTap(int surfaceWidth, int surfaceHeight, float x, float y) {
+        cameraInstance.touchToFocus(surfaceWidth, surfaceHeight, x, y);
+        Toast.makeText(
+                getContext(),
+                "Touch to focus",
+                Toast.LENGTH_SHORT
+        ).show();
     }
 
-
+    @Override
+    public void onDoubleTap(int surfaceWidth, int surfaceHeight, float x, float y) {
+        cameraInstance.cancelTouchToFocus();
+        Toast.makeText(
+                getContext(),
+                "Autofocus",
+                Toast.LENGTH_SHORT
+        ).show();
+    }
 
     @Override
     protected void onDetachedFromWindow() {

@@ -53,9 +53,16 @@ public class ClickableTextureView extends TextureView implements ClickableViewLi
     }
 
     @Override
-    public void onSingleTap(double x, double y) {
+    public void onSingleTap(float x, float y) {
         if (onTouchListener != null) {
             onTouchListener.onSingleTap(getWidth(), getHeight(), x, y);
+        }
+    }
+
+    @Override
+    public void onDoubleTap(float x, float y) {
+        if (onTouchListener != null) {
+            onTouchListener.onDoubleTap(getWidth(), getHeight(), x, y);
         }
     }
 
@@ -75,16 +82,15 @@ public class ClickableTextureView extends TextureView implements ClickableViewLi
 
         @Override
         public boolean onDoubleTap(MotionEvent e) {
-            return super.onDoubleTap(e);
+            if (onTouchListener != null) {
+                onTouchListener.onDoubleTap(e.getX(), e.getY());
+            }
+
+            return true;
         }
 
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {
-            return super.onSingleTapConfirmed(e);
-        }
-
-        @Override
-        public boolean onSingleTapUp(MotionEvent e) {
             if (onTouchListener != null) {
                 onTouchListener.onSingleTap(e.getX(), e.getY());
             }
@@ -92,5 +98,9 @@ public class ClickableTextureView extends TextureView implements ClickableViewLi
             return true;
         }
 
+        @Override
+        public boolean onSingleTapUp(MotionEvent e) {
+            return true;
+        }
     }
 }
