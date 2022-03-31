@@ -254,6 +254,14 @@ public class DecoratedBarcodeView extends FrameLayout {
         this.torchListener = listener;
     }
 
+    public void addOnCameraPreviewModeChangedListener(OnCameraPreviewModeChangedListener listener) {
+        barcodeView.addOnCameraPreviewModeChangedListener(listener);
+    }
+
+    public void removeOnCameraPreviewModeChangedListener(OnCameraPreviewModeChangedListener listener) {
+        barcodeView.removeOnCameraPreviewModeChangedListener(listener);
+    }
+
     /**
      * The Listener to torch/fflashlight events (turn on, turn off).
      */

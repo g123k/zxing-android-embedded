@@ -1,11 +1,14 @@
 package com.journeyapps.barcodescanner;
 
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.os.Build;
@@ -20,10 +23,13 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.Animation;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
+
 import com.google.zxing.client.android.R;
-import com.google.zxing.client.android.camera.CameraConfigurationUtils;
 import com.journeyapps.barcodescanner.camera.CameraInstance;
 import com.journeyapps.barcodescanner.camera.CameraSettings;
 import com.journeyapps.barcodescanner.camera.CameraSurface;
@@ -37,7 +43,9 @@ import com.journeyapps.barcodescanner.camera.OnSurfaceTouchListener;
 import com.journeyapps.barcodescanner.camera.PreviewScalingStrategy;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * CameraPreview is a view that handles displaying of a camera preview on a SurfaceView. It is
@@ -62,7 +70,6 @@ import java.util.List;
  * 7. set surface and start preview
  */
 public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
-
     public interface StateListener {
         /**
          * Preview and frame sizes are determined.
@@ -88,60 +95,41 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
     }
 
     private static final String TAG = CameraPreview.class.getSimpleName();
-
     private CameraInstance cameraInstance;
-
     private WindowManager windowManager;
-
     private Handler stateHandler;
-
     private boolean useTextureView = false;
-
     private SurfaceView surfaceView;
     private TextureView textureView;
-
     private boolean previewActive = false;
-
     private RotationListener rotationListener;
     private int openedOrientation = -1;
-
     // Delay after rotation change is detected before we reorientate ourselves.
     // This is to avoid double-reinitialization when the Activity is destroyed and recreated.
     private static final int ROTATION_LISTENER_DELAY_MS = 250;
-
     private List<StateListener> stateListeners = new ArrayList<>();
-
     private DisplayConfiguration displayConfiguration;
     private CameraSettings cameraSettings = new CameraSettings();
-
     // Size of this container, non-null after layout is performed
     private Size containerSize;
-
     // Size of the preview resolution
     private Size previewSize;
-
     // Rect placing the preview surface
     private Rect surfaceRect;
-
     // Size of the current surface. non-null if the surface is ready
     private Size currentSurfaceSize;
-
     // Framing rectangle relative to this view
     private Rect framingRect = null;
-
     // Framing rectangle relative to the preview resolution
     private Rect previewFramingRect = null;
-
     // Size of the framing rectangle. If null, defaults to using a margin percentage.
     private Size framingRectSize = null;
-
     // Fraction of the width / heigth to use as a margin. This fraction is used on each size, so
     // must be smaller than 0.5;
     private double marginFraction = 0.1d;
-
     private PreviewScalingStrategy previewScalingStrategy = null;
-
     private boolean torchOn = false;
+    private Set<OnCameraPreviewModeChangedListener> listeners = new HashSet<OnCameraPreviewModeChangedListener>();
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH)
     private TextureView.SurfaceTextureListener surfaceTextureListener() {
@@ -171,7 +159,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
     }
 
     private final SurfaceHolder.Callback surfaceCallback = new SurfaceHolder.Callback() {
-
         @Override
         public void surfaceCreated(SurfaceHolder holder) {
 
@@ -192,7 +179,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
             startPreviewIfReady();
         }
     };
-
     private final Handler.Callback stateCallback = new Handler.Callback() {
         @Override
         public boolean handleMessage(Message message) {
@@ -211,7 +197,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
             return false;
         }
     };
-
     private RotationCallback rotationCallback = new RotationCallback() {
         @Override
         public void onRotationChanged(int rotation) {
@@ -240,7 +225,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         initialize(context, attrs, defStyleAttr, 0);
     }
 
-
     private void initialize(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         if (getBackground() == null) {
             // Default to SurfaceView colour, so that there are less changes.
@@ -248,6 +232,7 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         }
 
         initializeAttributes(attrs);
+        setWillNotDraw(false);
 
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 
@@ -263,24 +248,118 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         setupSurfaceView();
     }
 
+    public void addOnCameraPreviewModeChangedListener(OnCameraPreviewModeChangedListener listener) {
+        this.listeners.add(listener);
+    }
+
+    public void removeOnCameraPreviewModeChangedListener(OnCameraPreviewModeChangedListener listener) {
+        this.listeners.remove(listener);
+    }
+
+    private final int TOUCH_TO_FOCUS_STROKE_WIDTH = 10; // dp
+    private final int TOUCH_TO_FOCUS_STROKE_RADIUS = 150; // dp
+    private float touchToFocusX;
+    private float touchToFocusY;
+    private Paint touchToFocusPaint;
+    private ValueAnimator touchToFocusAnimation;
+
     @Override
     public void onSingleTap(int surfaceWidth, int surfaceHeight, float x, float y) {
+        if (cameraInstance == null) {
+            return;
+        }
+
         cameraInstance.touchToFocus(surfaceWidth, surfaceHeight, x, y);
-        Toast.makeText(
-                getContext(),
-                "Touch to focus",
-                Toast.LENGTH_SHORT
-        ).show();
+        startTouchToFocusAnimation(x, y);
+
+        for (OnCameraPreviewModeChangedListener listener : listeners) {
+            listener.onCameraPreviewModeChanged(CameraPreviewMode.TOUCH_TO_FOCUS);
+        }
+    }
+
+    private void startTouchToFocusAnimation(float x, float y) {
+        touchToFocusX = x;
+        touchToFocusY = y;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
+            initTouchToFocusPaint();
+
+            if (touchToFocusAnimation != null) {
+                touchToFocusAnimation.cancel();
+            } else {
+                initTouchToFocusAnimation();
+            }
+
+            touchToFocusAnimation.start();
+        }
     }
 
     @Override
     public void onDoubleTap(int surfaceWidth, int surfaceHeight, float x, float y) {
+        if (cameraInstance == null) {
+            return;
+        }
+
         cameraInstance.cancelTouchToFocus();
-        Toast.makeText(
-                getContext(),
-                "Autofocus",
-                Toast.LENGTH_SHORT
-        ).show();
+        startTouchToFocusAnimation(getWidth() / 2, getHeight() / 2);
+
+        for (OnCameraPreviewModeChangedListener listener : listeners) {
+            listener.onCameraPreviewModeChanged(CameraPreviewMode.FOCUS_CENTER);
+        }
+    }
+
+    @Override
+    public void onLongTap(int surfaceWidth, int surfaceHeight, float x, float y) {
+        if (cameraInstance == null) {
+            return;
+        }
+
+        cameraInstance.defaultFocus();
+
+        for (OnCameraPreviewModeChangedListener listener : listeners) {
+            listener.onCameraPreviewModeChanged(CameraPreviewMode.DEFAULT);
+        }
+    }
+
+    private void initTouchToFocusPaint() {
+        if (touchToFocusPaint != null) {
+            return;
+        }
+
+        touchToFocusPaint = new Paint();
+        touchToFocusPaint.setColor(Color.BLACK);
+        touchToFocusPaint.setShadowLayer(12, 0, 0, Color.WHITE);
+        touchToFocusPaint.setStyle(Paint.Style.STROKE);
+        touchToFocusPaint.setStrokeWidth(Util.convertPixelsToDp(TOUCH_TO_FOCUS_STROKE_WIDTH, getContext()));
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.HONEYCOMB)
+    private void initTouchToFocusAnimation() {
+        if (touchToFocusAnimation != null) {
+            return;
+        }
+
+        touchToFocusAnimation = ValueAnimator.ofFloat(0f, 1f);
+        touchToFocusAnimation.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                invalidate();
+            }
+        });
+        touchToFocusAnimation.setDuration(getResources().getInteger(android.R.integer.config_mediumAnimTime));
+        touchToFocusAnimation.setRepeatCount(1);
+        touchToFocusAnimation.setRepeatMode(Animation.REVERSE);
+        touchToFocusAnimation.setInterpolator(new AccelerateDecelerateInterpolator());
+    }
+
+    @Override
+    public void onDrawForeground(Canvas canvas) {
+        super.onDrawForeground(canvas);
+
+        if (touchToFocusAnimation != null && touchToFocusAnimation.isRunning()) {
+            float percent = ((Float) touchToFocusAnimation.getAnimatedValue());
+            canvas.drawCircle(touchToFocusX, touchToFocusY, Util.convertPixelsToDp(TOUCH_TO_FOCUS_STROKE_RADIUS, getContext()) * percent, touchToFocusPaint);
+        }
     }
 
     @Override
@@ -288,8 +367,16 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         super.onDetachedFromWindow();
 
         if (textureView instanceof ClickableTextureView && Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            ((ClickableTextureView)textureView).setOnSurfaceTouchListener(null);
+            ((ClickableTextureView) textureView).setOnSurfaceTouchListener(null);
+        } else if (surfaceView instanceof ClickableSurfaceView) {
+            ((ClickableSurfaceView) surfaceView).setOnSurfaceTouchListener(null);
         }
+
+        if (touchToFocusAnimation != null) {
+            touchToFocusAnimation.cancel();
+        }
+
+        listeners.clear();
     }
 
     /**
@@ -367,7 +454,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
             for (StateListener listener : stateListeners) {
                 listener.previewStarted();
             }
-
         }
 
         @Override
@@ -407,9 +493,9 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         frameInPreview.offset(-surfaceRect.left, -surfaceRect.top);
 
         previewFramingRect = new Rect(frameInPreview.left * previewWidth / surfaceRect.width(),
-                frameInPreview.top * previewHeight / surfaceRect.height(),
-                frameInPreview.right * previewWidth / surfaceRect.width(),
-                frameInPreview.bottom * previewHeight / surfaceRect.height());
+            frameInPreview.top * previewHeight / surfaceRect.height(),
+            frameInPreview.right * previewWidth / surfaceRect.width(),
+            frameInPreview.bottom * previewHeight / surfaceRect.height());
 
         if (previewFramingRect.width() <= 0 || previewFramingRect.height() <= 0) {
             previewFramingRect = null;
@@ -472,7 +558,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         } else {
             return new FitCenterStrategy();
         }
-
     }
 
     private void previewSized(Size size) {
@@ -634,7 +719,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         rotationListener.listen(getContext(), rotationCallback);
     }
 
-
     /**
      * Pause scanning and the camera preview. Typically this should be called from the Activity's
      * onPause() method.
@@ -755,7 +839,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         return cameraInstance;
     }
 
-
     private void startCameraPreview(CameraSurface surface) {
         if (!previewActive && cameraInstance != null) {
             Log.i(TAG, "Starting preview");
@@ -805,8 +888,6 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         return previewActive;
     }
 
-
-
     /**
      * Calculate framing rectangle, relative to the preview frame.
      * <p>
@@ -815,7 +896,7 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
      * Override this for more control over the framing rect calculations.
      *
      * @param container this container, with left = top = 0
-     * @param surface   the SurfaceView, relative to this container
+     * @param surface the SurfaceView, relative to this container
      * @return the framing rect, relative to this container
      */
     protected Rect calculateFramingRect(Rect container, Rect surface) {
@@ -861,5 +942,9 @@ public class CameraPreview extends ViewGroup implements OnSurfaceTouchListener {
         super.onRestoreInstanceState(superState);
         boolean torch = myState.getBoolean("torch");
         setTorch(torch);
+    }
+
+    public enum CameraPreviewMode {
+        DEFAULT, TOUCH_TO_FOCUS, FOCUS_CENTER
     }
 }

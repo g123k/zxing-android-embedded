@@ -2,6 +2,10 @@ package com.journeyapps.barcodescanner.camera;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
@@ -39,7 +43,6 @@ public class ClickableSurfaceView extends SurfaceView implements ClickableViewLi
         gestureDetector = new GestureDetector(context, new GestureListener(this));
     }
 
-
     public OnSurfaceTouchListener getOnSurfaceTouchListener() {
         return onTouchListener;
     }
@@ -68,6 +71,13 @@ public class ClickableSurfaceView extends SurfaceView implements ClickableViewLi
         }
     }
 
+    @Override
+    public void onLongTap(float x, float y) {
+        if (onTouchListener != null) {
+            onTouchListener.onLongTap(getWidth(), getHeight(), x, y);
+        }
+    }
+
     private static class GestureListener extends
             GestureDetector.SimpleOnGestureListener {
 
@@ -90,6 +100,14 @@ public class ClickableSurfaceView extends SurfaceView implements ClickableViewLi
 
             return true;
         }
+
+        @Override
+        public void onLongPress(MotionEvent e) {
+            if (onTouchListener != null) {
+                onTouchListener.onLongTap(e.getX(), e.getY());
+            }
+        }
+
 
         @Override
         public boolean onSingleTapConfirmed(MotionEvent e) {

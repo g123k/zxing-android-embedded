@@ -19,6 +19,10 @@ public class DefaultDecoderFactory implements DecoderFactory {
     public DefaultDecoderFactory() {
     }
 
+    public DefaultDecoderFactory(Collection<BarcodeFormat> decodeFormats) {
+        this.decodeFormats = decodeFormats;
+    }
+
     public DefaultDecoderFactory(Collection<BarcodeFormat> decodeFormats, Map<DecodeHintType, ?> hints, String characterSet) {
         this.decodeFormats = decodeFormats;
         this.hints = hints;
@@ -31,11 +35,11 @@ public class DefaultDecoderFactory implements DecoderFactory {
 
         hints.putAll(baseHints);
 
-        if(this.hints != null) {
+        if (this.hints != null) {
             hints.putAll(this.hints);
         }
 
-        if(this.decodeFormats != null) {
+        if (this.decodeFormats != null) {
             hints.put(DecodeHintType.POSSIBLE_FORMATS, decodeFormats);
         }
 

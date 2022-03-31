@@ -1,15 +1,12 @@
 package com.journeyapps.barcodescanner.camera;
 
 import android.content.Context;
-import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
 import android.os.Handler;
 import android.util.Log;
 import android.view.SurfaceHolder;
 
 import com.google.zxing.client.android.R;
 import com.journeyapps.barcodescanner.Size;
-import com.journeyapps.barcodescanner.SourceData;
 import com.journeyapps.barcodescanner.Util;
 
 /**
@@ -242,12 +239,16 @@ public class CameraInstance {
         }
     }
 
+    public void defaultFocus() {
+        cameraManager.defaultFocus();
+    }
+
     public void touchToFocus(int surfaceWidth, int surfaceHeight, float x, float y) {
         cameraManager.focusTo(surfaceWidth, surfaceHeight, x, y);
     }
 
     public void cancelTouchToFocus() {
-        cameraManager.cancelFocus();
+        cameraManager.centerFocus();
     }
 
     /**
@@ -276,4 +277,5 @@ public class CameraInstance {
     protected CameraSurface getSurface() {
         return surface;
     }
+
 }

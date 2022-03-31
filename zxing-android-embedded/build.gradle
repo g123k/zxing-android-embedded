@@ -1,12 +1,11 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
-apply plugin: 'com.jfrog.bintray'
 
 
 ext.artifactId = 'zxing-android-embedded'
 
 dependencies {
-    api project.zxingCore
+    api 'com.google.zxing:core:3.2.1'
 
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
@@ -17,8 +16,8 @@ dependencies {
 
 android {
     resourcePrefix 'zxing_'
-    compileSdkVersion project.androidTargetSdk
-    buildToolsVersion project.androidBuildTools
+    compileSdkVersion 31
+    buildToolsVersion '31.0.0'
 
     sourceSets {
         main {

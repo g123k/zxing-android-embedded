@@ -16,13 +16,9 @@
 
 package com.journeyapps.barcodescanner.camera;
 
-import android.annotation.TargetApi;
 import android.content.Context;
-import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Build;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -78,6 +74,18 @@ public final class CameraManager {
 
     private Context context;
 
+    public void defaultFocus() {
+        Camera.Parameters parameters = camera.getParameters();
+        parameters.setFocusAreas(null);
+        parameters.setMeteringAreas(null);
+
+        autoFocusManager.stop();
+        autoFocusManager = null;
+
+        camera.setParameters(parameters);
+
+        autoFocusManager = new AutoFocusManager(camera, settings);
+    }
 
     public void focusTo(int surfaceWidth, int surfaceHeight, float x, float y) {
         Camera.Parameters parameters = camera.getParameters();
@@ -85,19 +93,19 @@ public final class CameraManager {
         autoFocusManager.stop();
         autoFocusManager = null;
 
-        CameraConfigurationUtils.setFocusArea(parameters, surfaceWidth, surfaceHeight, x, y);
+        CameraConfigurationUtils.setFocusArea(isCameraRotated(), parameters, surfaceWidth, surfaceHeight, x, y);
         camera.setParameters(parameters);
 
         autoFocusManager = new AutoFocusManager(camera, settings);
     }
 
-    public void cancelFocus() {
+    public void centerFocus() {
         Camera.Parameters parameters = camera.getParameters();
 
         autoFocusManager.stop();
         autoFocusManager = null;
 
-        CameraConfigurationUtils.removeFocusArea(parameters);
+        CameraConfigurationUtils.centerFocusArea(parameters);
         camera.setParameters(parameters);
 
         autoFocusManager = new AutoFocusManager(camera, settings);
@@ -283,9 +291,9 @@ public final class CameraManager {
         if (!safeMode) {
             CameraConfigurationUtils.setTorch(parameters, false);
 
-            if (settings.isScanInverted()) {
+            //if (settings.isScanInverted()) {
                 CameraConfigurationUtils.setInvertColor(parameters);
-            }
+            //}
 
             CameraConfigurationUtils.setBarcodeSceneMode(parameters);
 

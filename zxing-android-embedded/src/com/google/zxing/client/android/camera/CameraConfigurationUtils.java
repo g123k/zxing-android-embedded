@@ -178,7 +178,7 @@ public final class CameraConfigurationUtils {
     }
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
-    public static void setFocusArea(Camera.Parameters parameters) {
+    public static void centerFocusArea(Camera.Parameters parameters) {
         if (parameters.getMaxNumFocusAreas() > 0) {
             Log.i(TAG, "Old focus areas: " + toString(parameters.getFocusAreas()));
             List<Camera.Area> middleArea = buildMiddleArea(AREA_PER_1000);
@@ -190,20 +190,22 @@ public final class CameraConfigurationUtils {
     }
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
-    public static void setFocusArea(Camera.Parameters parameters, float surfaceWidth, float surfaceHeight, float x, float y) {
+    public static void setFocusArea(boolean applyRotation, Camera.Parameters parameters, float surfaceWidth, float surfaceHeight, float x, float y) {
         if (parameters.getMaxNumFocusAreas() > 0) {
-            Rect focusRect = calculateTapArea(surfaceWidth, surfaceHeight, x, y, 1f);
+            Rect focusRect = calculateTapArea(surfaceWidth, surfaceHeight, x, y);
+
+            if (applyRotation) {
+                focusRect = Util.invert(focusRect);
+            }
 
             List<Camera.Area> areas = new ArrayList<>();
             areas.add(new Camera.Area(focusRect, 1000));
             parameters.setFocusAreas(areas);
 
             if (meteringAreaSupported(parameters)) {
-                Rect meteringRect = calculateTapArea(surfaceWidth, surfaceHeight, x, y, 1.5f);
-
                 List<Camera.Area> meteringAreas = new ArrayList<>();
-                meteringAreas.add(new Camera.Area(meteringRect, 1000));
-                parameters.setMeteringAreas(meteringAreas);
+                meteringAreas.add(new Camera.Area(focusRect, 1000));
+                //parameters.setMeteringAreas(meteringAreas);
             }
         } else {
             Log.i(TAG, "Device does not support focus areas");
@@ -224,28 +226,29 @@ public final class CameraConfigurationUtils {
 
 
 
-    private static Rect calculateTapArea(float surfaceWidth, float surfaceHeight, float x, float y, float coefficient) {
-        int areaSize = Float.valueOf(FOCUS_AREA_SIZE * coefficient).intValue();
+    private static Rect calculateTapArea(float surfaceWidth, float surfaceHeight, float x, float y) {
+        return new Rect(
+            roundMinAreaValue((((x - 100f) / surfaceWidth) * 2000) - 1000),
+            roundMinAreaValue((((y - 100f) / surfaceHeight) * 2000) - 1000),
+            roundMaxAreaValue((((x + 100f) / surfaceWidth) * 2000) - 1000),
+            roundMaxAreaValue((((y + 100f) / surfaceHeight) * 2000) - 1000)
+        );
+    }
 
-        int left = Util.clamp((int) x - areaSize / 2, 0, Float.valueOf(surfaceWidth).intValue() - areaSize);
-        int top = Util.clamp((int) y - areaSize / 2, 0, Float.valueOf(surfaceHeight).intValue() - areaSize);
+    private static int roundMinAreaValue(float value) {
+        if (value < -1000f) {
+            return -1000;
+        } else {
+            return Math.round(value);
+        }
+    }
 
-        //RectF rectF = new RectF(left, top, left + areaSize, top + areaSize);
-
-        Rect touchRect = new Rect(
-                (int)(x - 100),
-                (int)(y - 100),
-                (int)(x + 100),
-                (int)(y + 100));
-
-
-        final RectF rectF = new RectF(
-                touchRect.left * 2000f/surfaceWidth - 1000f,
-                touchRect.top * 2000f/surfaceHeight - 1000f,
-                touchRect.right * 2000f/surfaceWidth - 1000f,
-                touchRect.bottom * 2000f/surfaceHeight - 1000f);
-
-        return new Rect(Math.round(rectF.left), Math.round(rectF.top), Math.round(rectF.right), Math.round(rectF.bottom));
+    private static int roundMaxAreaValue(float value) {
+        if (value > 1000f) {
+            return 1000;
+        } else {
+            return Math.round(value);
+        }
     }
 
     @TargetApi(Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
